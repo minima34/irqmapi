@@ -34,6 +34,7 @@ __attribute__((section("__versions"))) = {
 	{ 0x10a6bb3c, __VMLINUX_SYMBOL_STR(__mutex_init) },
 	{ 0x9d378f70, __VMLINUX_SYMBOL_STR(queue_delayed_work_on) },
 	{ 0x43a53735, __VMLINUX_SYMBOL_STR(__alloc_workqueue_key) },
+	{ 0xa202a8e5, __VMLINUX_SYMBOL_STR(kmalloc_order_trace) },
 	{ 0x71ff0ddf, __VMLINUX_SYMBOL_STR(class_destroy) },
 	{ 0x618014ef, __VMLINUX_SYMBOL_STR(device_create) },
 	{ 0x6bc3fbc0, __VMLINUX_SYMBOL_STR(__unregister_chrdev) },
@@ -51,8 +52,8 @@ __attribute__((section("__versions"))) = {
 	{ 0xfadf2436, __VMLINUX_SYMBOL_STR(memstart_addr) },
 	{ 0x50e8c70f, __VMLINUX_SYMBOL_STR(remap_pfn_range) },
 	{ 0xd716155e, __VMLINUX_SYMBOL_STR(mutex_trylock) },
-	{ 0x27e1a049, __VMLINUX_SYMBOL_STR(printk) },
 	{ 0x322f0473, __VMLINUX_SYMBOL_STR(mutex_unlock) },
+	{ 0x27e1a049, __VMLINUX_SYMBOL_STR(printk) },
 	{ 0x1fdc7df2, __VMLINUX_SYMBOL_STR(_mcount) },
 };
 
@@ -64,4 +65,4 @@ __attribute__((section(".modinfo"))) =
 MODULE_ALIAS("of:N*T*Cirqmap");
 MODULE_ALIAS("of:N*T*CirqmapC*");
 
-MODULE_INFO(srcversion, "AEF65E0AAECC76B3B7A4AE0");
+MODULE_INFO(srcversion, "2E4D17C33F6DD16D4BD6CEA");

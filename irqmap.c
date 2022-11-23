@@ -1,3 +1,5 @@
+#include "irqmap.h"
+
 #include <linux/interrupt.h>
 #include <linux/of.h>
 #include <linux/of_irq.h>
@@ -5,66 +7,40 @@
 #include <linux/of_gpio.h>
 #include <linux/sched.h>
 
-//#include <linux/kernel.h>
 #include <linux/fs.h>
-//#include <linux/cdev.h>
+
 #include <linux/module.h>
-#include <asm/uaccess.h> /* for put_user */
+#include <asm/uaccess.h> // put_user_func
+
 #include <linux/slab.h>
-
-/*
-#include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/device.h>
-#include <linux/init.h> 
-#include <linux/fs.h> 
-*/
 #include <linux/mm.h> 
-/*
-#include <asm/uaccess.h>
-*/
 #include <linux/workqueue.h>
-
-static void irqmap_send_event(struct work_struct *w);
-
-static struct workqueue_struct *wq = 0;
-static DECLARE_DELAYED_WORK(irqmap_work, irqmap_send_event);
-static unsigned long qd;
-
 
 #define MAX_IRQS sizeof(int) //32
 #define DEVICE_NAME "irqmap"
 #define CLASS_NAME "q_mogu"
-#define MMAP_SIZE (PAGE_SIZE *1)   /* max size mmaped to userspace */
-#define LAST_MMAP_BYTE (MMAP_SIZE-1)
-
-/*
- *
- *    A C H O 
- *  D R I V E R
- * 
- * 
- */
-
+#define IRQMMAP_PAGES 4
+#define IRQMMAP_SIZE (PAGE_SIZE * IRQMMAP_PAGES)   /* max size mmaped to userspace */
+#define LAST_MMAP_BYTE (IRQMMAP_SIZE-1)
+#define LAST_QUEUE_BYTE (PAGE_SIZE-1)
 
 static int device_open(struct inode *inode, struct file *filp);
 static int device_release(struct inode *inode, struct file *filp);
 static ssize_t device_read(struct file *filp, char *buffer, size_t length, loff_t *offset);
 static ssize_t device_write(struct file *filp, const char *buf, size_t len, loff_t *off);
 static int device_mmap(struct file *filp, struct vm_area_struct *vma);
+static void irqmap_timer(struct work_struct *w);
+static void irqmap_send_ready_event(void);
+
+static struct workqueue_struct *wq = 0;
+static DECLARE_DELAYED_WORK(irqmap_work, irqmap_timer);
+static unsigned long qd;
 
 /*
 */
 int irqs[MAX_IRQS];
 static char *irq_strs[MAX_IRQS] = {0};
-/*
-static struct file_operations fops = {
-  .read = ,
-  .write = ,
-  .open = ,
-  .release = ,
-};
-*/
+
 static const struct file_operations fops = {
     .open = device_open,
     .read = device_read,
@@ -78,77 +54,21 @@ static int major;
 static struct class*  class;
 static struct device*  device;
 //static int Device_Open = 0;
+
 #define SUCCESS 0
 #define BUF_LEN 80
 static char msg[BUF_LEN];
 static char *msg_Ptr;
 
-//static char *ivs = NULL; 
 static DEFINE_MUTEX(device_mutex);
 
-//
-// this is the RAM area where we will the queue for the energo protections :D
-//
-struct prot_queue
-{
-    int events[1016];
-    //
-    //1016 ints * 4 bytes == 4064 :)
-    //
-    // so we can handle 1016 events in this queue :)
-    //
-    // or events are numbers so lets think it how to encode events to numbers :)
-    //
-    // ok our queue will start with 'ff' bytes which in 4 bytes system means:
-    // ff is 1 byte
-    // so ffffffff == 4294967295 , this is the maximum number of unsigned int :)
-    // same
-    // as
-    // zeros, imagine 1016 bytes filled with zeros
-    // ok let fill with zeros :D
-    //
-    // for ur simplyness
-    // :)
-    //
-    // lets fill it 
-    // Oh stupid me, its already filled with 00 :D
-    // :D
-    //
-    // so our event will be interrupt number, lets map it out :)
-};
 
-struct irq_vals {
-    //
-	int irqs;                  //4
-    void (*irqh)(int);        //8 suppose
-    //write pointer add to q
-    int *wp;                  //8 -> 20
-    //read pointer read from q
-    int *rp;                  //8 -> o yea 28 here
-    int i_ev;                  //4 -> 32 hihihi govori_mi_finala
-    struct prot_queue *q;      //4064
-    //
-    // no sleep, sleep kills
-};
+struct irq_mmap *mmap;
 
-// kvi magiiki a :D
+// kvi magiiki a :D :D :D :D :D :D
 //
-
 //I have 4096 bytes memory in this 1 page map
 // sizeof(int) is 4 bytes
-
-static struct irq_vals *ivs;
-
-static void
-mykmod_work_handler(struct work_struct *w)
-{
-    //this will spam a lot
-    //pr_info("mykmod work %u jiffies\n", (unsigned)onesec);
-    if(*ivs->rp) if(ivs->irqh)
-        ivs->irqh(*ivs->rp);
-    //podobre da pestim ram otkolkoto cpu   ram -eq water   cpu -eqs electricity kwh  :)))) happy smile :D :))))) //this is the most commented kernel space code :D
-}
-
 
 int int_get_array_index(int val, int *arr, u32 size)
 {
@@ -161,59 +81,70 @@ int int_get_array_index(int val, int *arr, u32 size)
 			return index;
 }
 
-//ivs=0+3_last_byte_(4-1)==3
-//0//                     /
-//1//                  /
-//2//               /
-//3//            <       #to4no_last_byte
-//size 4 bytes
-//
-// 0 <  0    0    0 
-// 1    1 <  1    1
-// 2    2    2 <  2
-// 3    3    3    3 <
-//
-// 0 <  0    0    0 
-// 1    1 <  1    1
-// 2    2    2 <  2
-// 3    3    3    3 <
-//
-
-void zashtiti_queue_add(int irq_ind)
+static void irqmap_send_ready_event(void)
 {
+    //this will spam a lot
+    //
+    //
+    // this to check!!!
+    //if(*ives->rp) if(ives->irqh)
+    //    ives->irqh(*ives->rp);
+    //
+
+    //todo @ finish
+    //
+    // poll shit here tommorow
+    //
+
+    //
+    //podobre da pestim ram otkolkoto cpu   ram -eq water   cpu -eqs electricity kwh  :)))) happy smile :D :))))) //this is the most commented kernel space code :D
+}
+
+static void irqmap_queue_add(int irq_ind)
+{
+    //this is the interrupt fork
+    // you must be ultra fast here
+
     //lets walk in this memory area :D
     //no lets do it efficently
     // higher KPD
     // with walking pointer :) :D #flow_order :)
     
     // we use the last_mmap_byte here
-    *ivs->wp = irq_ind; //assign interrupt value/number :D :)
+    
+    *mmap->ives->wp = irq_ind; //assign interrupt value/number :D :)
 
     //other way
-    //ivs->wp == q+(4064-1)
+    //ives->wp == q+(4064-1)
     // but this way its more resource expensive to know bytes of queue
     //
     // haha izgubih se :D <3
     //
-    if(ivs->wp == ivs+LAST_MMAP_BYTE)
+    // if(mmap->ives.wp == &mmap->queue+LAST_QUEUE_BYTE)
+    // |
+    if(mmap->ives->wp == mmap+LAST_MMAP_BYTE)
     {
         //
         //LAST_MMAP_BYTE here
         // reset wp to beggining of queue (addr)
-        ivs->wp = ivs->q->events;
+        mmap->ives->wp = mmap->events;
         //void * memset ( void * ptr, int value, size_t num );
         // i think its not needed but idk, suppose yes to not lose data :) #will_see_later_I_must_impl_wa_to_see_ram
         //ways :) <#
         //memory map :)
         //steve jobs is my acid friend :)
-        printk(KERN_NOTICE "irqmap_ram: LAST_MMAP_BYTE@%p => %x", ivs->wp, *ivs->wp);
+        //
+        printk(KERN_NOTICE "irqmap_ram: LAST_MMAP_BYTE@%p => %x", mmap->ives->wp, *mmap->ives->wp);
+        //
         //oyea
         //
     }
     else
-        ivs->wp++; //starts with the first byte of the queue, goto next one :D :)
+        mmap->ives->wp++; //starts with the first byte of the queue, goto next one :D :)
 
-    // we ready here :)
+    // we ready, tell the userspace to read :D :)
+    //
+    irqmap_send_ready_event();
 }
 
 /// @brief todo area
@@ -239,7 +170,7 @@ static irqreturn_t irq_handler (int irq, void *dev_id)
 
 	printk (KERN_NOTICE "irqmap: interrupt %d fired\n", irq);
 
-	ivs->irqs |= 1 << irq_ind;
+	mmap->irqs |= 1 << irq_ind;
 
 	//local_irq_save(flags);
   	//led_toggle = (0x01 ^ led_toggle);                             // toggle the old value
@@ -247,10 +178,7 @@ static irqreturn_t irq_handler (int irq, void *dev_id)
 	//pr_info("Interrupt Occurred : GPIO_21_OUT : %d ",gpio_get_value(GPIO_21_OUT));
   	//local_irq_restore(flags);
 
-    //userspace interrupt
-    //if(ivs->irqh) ivs->irqh();
-
-    zashtiti_queue_add(irq_ind);
+    irqmap_queue_add(irq_ind);
     // flowa ko prai :D :D
     //
 
@@ -338,31 +266,35 @@ static int __init irqmap_probe(struct platform_device *pdev)
 	*/
 
 	/* init this mmap area */
-    // ivs = kmalloc(MMAP_SIZE, GFP_KERNEL);
-    ivs = kzalloc(MMAP_SIZE, GFP_KERNEL);
-    if (ivs == NULL) {
+    // mmap = kmalloc(IRQMMAP_SIZE, GFP_KERNEL);
+    mmap = kzalloc(IRQMMAP_SIZE, GFP_KERNEL);
+    if (mmap == NULL) {
         ret = -ENOMEM; 
         goto out;
     }
 
-    ivs->rp = ivs->q->events;
-    ivs->wp = ivs->q->events;
+    //
+    // init queue pointers
+    //
+    // todo see offsets
+    //
+    mmap->ives = (struct irqmap_events *)mmap+8;
+    mmap->events = (int*)mmap+8+128;
+    mmap->ives->rp = mmap->events;
+    mmap->ives->wp = mmap->events;
 
-    //sprintf(ivs, "xyz\n");
-	//ivs = kzalloc(sizeof(struct irq_vals), GFP_KERNEL);
 	
-	// ivs->irq1 |= 1 << 2;
-	// ivs->irq1 |= 1 << 3;
-	// ivs->irq2 |= 1 << 3;
-	// ivs->irq2 |= 1 << 4;
-	// ivs->irq3 |= 1 << 1;
-	// ivs->irq3 |= 1 << 2;
-	// ivs->irq4 |= 1 << 9;
-	// ivs->irq4 |= 1 << 10;
+	// ives->irq1 |= 1 << 2;
+	// ives->irq1 |= 1 << 3;
+	// ives->irq2 |= 1 << 3;
+	// ives->irq2 |= 1 << 4;
+	// ives->irq3 |= 1 << 1;
+	// ives->irq3 |= 1 << 2;
+	// ives->irq4 |= 1 << 9;
+	// ives->irq4 |= 1 << 10;
 
-    //1ms latency?
-    qd = msecs_to_jiffies(1);
-    // this will spam a lot
+    //1sec spammer
+    qd = msecs_to_jiffies(1000);
     //pr_info("mykmod loaded %u jiffies\n", (unsigned)onesec);
 
         if (!wq)
@@ -394,7 +326,7 @@ static int irqmap_remove(struct platform_device *pdev)
 		free_irq(irqs[i], NULL);
 	}
 
-	kfree(ivs);
+	kfree(mmap);
 	pr_info("irqmap: unregistered!");
 	
 	return 0;
@@ -422,7 +354,7 @@ pr_info("irqmap: Device opened\n");
   //Device_Open++;
   
   //see here later
-  //sprintf(msg, "%p\n", ivs);
+  //sprintf(msg, "%p\n", ives);
   //msg_Ptr = msg;
   
   //try_module_get(THIS_MODULE);
@@ -458,13 +390,13 @@ static ssize_t device_read(struct file *filep, char *buffer, size_t len, loff_t 
 {
     int ret;
     
-    if (len > MMAP_SIZE) {
+    if (len > IRQMMAP_SIZE) {
         pr_info("irqmap: read overflow!\n");
         ret = -EFAULT;
         goto out;
     }
 
-    if (copy_to_user(buffer, ivs, len) == 0) {
+    if (copy_to_user(buffer, mmap, len) == 0) {
         pr_info("irqmap: copy %u char to the user\n", len);
         ret = len;
     } else {
@@ -479,7 +411,7 @@ static ssize_t device_write(struct file *filep, const char *buffer, size_t len, 
 {
     int ret;
  
-    if (copy_from_user(ivs, buffer, len)) {
+    if (copy_from_user(mmap, buffer, len)) {
         pr_err("irqmap: write fault!\n");
         ret = -EFAULT;
         goto out;
@@ -497,12 +429,12 @@ static int device_mmap(struct file *filp, struct vm_area_struct *vma)
     struct page *page = NULL;
     unsigned long size = (unsigned long)(vma->vm_end - vma->vm_start);
 
-    if (size > MMAP_SIZE) {
+    if (size > IRQMMAP_SIZE) {
         ret = -EINVAL;
         goto out;  
     } 
    
-    page = virt_to_page((unsigned long)ivs + (vma->vm_pgoff << PAGE_SHIFT)); 
+    page = virt_to_page((unsigned long)mmap + (vma->vm_pgoff << PAGE_SHIFT)); 
     ret = remap_pfn_range(vma, vma->vm_start, page_to_pfn(page), size, vma->vm_page_prot);
     if (ret != 0) {
         goto out;
@@ -510,6 +442,12 @@ static int device_mmap(struct file *filp, struct vm_area_struct *vma)
 
 out:
     return ret;
+}
+
+
+static void irqmap_timer(struct work_struct *w)
+{
+    pr_info("irqmap: work %u jiffies\n", (unsigned)qd);
 }
 
 #if defined(CONFIG_OF)
