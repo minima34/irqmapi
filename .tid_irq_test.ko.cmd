@@ -1,1 +1,0 @@
-cmd_drivers/irq_test/tid_irq_test.ko := /home/szbaijie/workspace/a133/longan2/out/gcc-linaro-5.3.1-2016.05-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-ld -EL -r  -T ./scripts/module-common.lds -T ./arch/arm64/kernel/module.lds --build-id  -o drivers/irq_test/tid_irq_test.ko drivers/irq_test/tid_irq_test.o drivers/irq_test/tid_irq_test.mod.o ;  true
