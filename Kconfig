@@ -1,0 +1,6 @@
+config IRQMAP
+tristate "irqmap by acho tid"
+#depends on ARM64
+default y if ARM64
+help
+  irqmap by acho

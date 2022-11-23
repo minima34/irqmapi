@@ -1,0 +1,1 @@
+cmd_drivers/irqmap/built-in.o :=  rm -f drivers/irqmap/built-in.o; /home/szbaijie/workspace/a133_new/remio_clean/longan/out/gcc-linaro-5.3.1-2016.05-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-ar rcsD drivers/irqmap/built-in.o
