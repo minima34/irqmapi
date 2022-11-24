@@ -876,6 +876,10 @@ deps_/home/szbaijie/workspace/a133_new/remio_clean/longan/kernel/linux-4.9/drive
   include/linux/vm_event_item.h \
     $(wildcard include/config/memory/balloon.h) \
     $(wildcard include/config/balloon/compaction.h) \
+  include/linux/poll.h \
+  include/uapi/linux/poll.h \
+  arch/arm64/include/generated/asm/poll.h \
+  include/uapi/asm-generic/poll.h \
 
 /home/szbaijie/workspace/a133_new/remio_clean/longan/kernel/linux-4.9/drivers/irqmap/irqmap.o: $(deps_/home/szbaijie/workspace/a133_new/remio_clean/longan/kernel/linux-4.9/drivers/irqmap/irqmap.o)
 

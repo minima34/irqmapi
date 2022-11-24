@@ -69,3 +69,48 @@ static struct file_operations fops = {
 // 2    2    2 <  2
 // 3    3    3    3 <
 //
+
+/*
+** This function will be called when app calls the poll function
+*/
+// static unsigned int etx_poll(struct file *filp, struct poll_table_struct *wait)
+// {
+//   __poll_t mask = 0;
+// poll_wait(filp, &irqmap_queue, wait);
+//   pr_info("irqmap: poll function\n");
+//   //if( can_read )
+//   //{
+//     //can_read = false;
+// mask |= ( POLLIN | POLLRDNORM );
+//   //}
+//   //if( can_write )
+//   //{
+//   //  can_write = false;
+//   //  mask |= ( POLLOUT | POLLWRNORM );
+//   //}
+//   return mask;
+// }
+
+/*
+static unsigned int
+irqmap_poll(struct file *filp, poll_table *wait)
+{
+  // hihihiiiii Scull_Pipe *dev = filp->private_data;
+  unsigned int mask = 0;
+
+//    *
+//    * The buffer is circular; it is considered full
+//    * if "wp" is right behind "rp". "left" is 0 if the
+//    * buffer is empty, and it is "1" if it is completely full.
+//    *
+  //int left = (dev->rp + dev->buffersize - dev->wp) % dev->buffersize;
+
+  poll_wait(filp, &dev->inq, wait);
+    poll_wait(filp, &dev->outq, wait);
+
+  if (dev->rp != dev->wp) mask |= POLLIN | POLLRDNORM; // readable
+    if (left != 1)     mask |= POLLOUT | POLLWRNORM; // writable
+
+  return mask;
+}
+*/

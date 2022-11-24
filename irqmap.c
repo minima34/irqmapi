@@ -14,56 +14,66 @@
 
 #include <linux/slab.h>
 #include <linux/mm.h> 
-#include <linux/workqueue.h>
+//#include <linux/workqueue.h>
+#include <linux/wait.h>                 //Required for the wait queues
+#include <linux/poll.h>
 
-#define MAX_IRQS sizeof(int) //32
-#define DEVICE_NAME "irqmap"
+#define MAX_IRQS sizeof(int) //4*8 32 irqs
+#define irqmap_NAME "irqmap"
 #define CLASS_NAME "q_mogu"
 #define IRQMMAP_PAGES 4
 #define IRQMMAP_SIZE (PAGE_SIZE * IRQMMAP_PAGES)   /* max size mmaped to userspace */
 #define LAST_MMAP_BYTE (IRQMMAP_SIZE-1)
 #define LAST_QUEUE_BYTE (PAGE_SIZE-1)
 
-static int device_open(struct inode *inode, struct file *filp);
-static int device_release(struct inode *inode, struct file *filp);
-static ssize_t device_read(struct file *filp, char *buffer, size_t length, loff_t *offset);
-static ssize_t device_write(struct file *filp, const char *buf, size_t len, loff_t *off);
-static int device_mmap(struct file *filp, struct vm_area_struct *vma);
-static void irqmap_timer(struct work_struct *w);
-static void irqmap_send_ready_event(void);
+//Waitqueue
+DECLARE_WAIT_QUEUE_HEAD(irqmap_queue);
 
-static struct workqueue_struct *wq = 0;
-static DECLARE_DELAYED_WORK(irqmap_work, irqmap_timer);
-static unsigned long qd;
+/*
+** Function Prototypes
+*/
+static int irqmap_open(struct inode *inode, struct file *filp);
+static int irqmap_release(struct inode *inode, struct file *filp);
+static ssize_t irqmap_read(struct file *filp, char *buffer, size_t length, loff_t *offset);
+static ssize_t irqmap_write(struct file *filp, const char *buf, size_t len, loff_t *off);
+static int irqmap_mmap(struct file *filp, struct vm_area_struct *vma);
+static unsigned int irqmap_poll(struct file *filp, poll_table *wait);
+static void irqmap_send_ready_event(void);
 
 /*
 */
 int irqs[MAX_IRQS];
 static char *irq_strs[MAX_IRQS] = {0};
 
+/*
+** File operation sturcture
+*/
 static const struct file_operations fops = {
-    .open = device_open,
-    .read = device_read,
-    .write = device_write,
-    .release = device_release,
-    .mmap = device_mmap,
-    /*.unlocked_ioctl = device_ioctl,*/
+    .open = irqmap_open,
+    .read = irqmap_read,
+    .write = irqmap_write,
+    .release = irqmap_release,
+    .mmap = irqmap_mmap,
+    .poll = irqmap_poll,
+    /*.unlocked_ioctl = irqmap_ioctl,*/
     .owner = THIS_MODULE,
 };
 static int major;
 static struct class*  class;
 static struct device*  device;
-//static int Device_Open = 0;
+//static int irqmap_Open = 0;
 
 #define SUCCESS 0
 #define BUF_LEN 80
 static char msg[BUF_LEN];
 static char *msg_Ptr;
 
-static DEFINE_MUTEX(device_mutex);
-
-
+static DEFINE_MUTEX(irqmap_mutex);
 struct irq_mmap *mmap;
+
+//todo
+//static bool can_write = false;
+//static bool can_read  = false;
 
 // kvi magiiki a :D :D :D :D :D :D
 //
@@ -96,6 +106,13 @@ static void irqmap_send_ready_event(void)
     // poll shit here tommorow
     //
 
+    //can_write = true;
+    //wake up the waitqueue
+    //wake_up(&wait_queue_etx_data);
+    //
+    mmap->ready=true;
+    wake_up(&irqmap_queue);
+
     //
     //podobre da pestim ram otkolkoto cpu   ram -eq water   cpu -eqs electricity kwh  :)))) happy smile :D :))))) //this is the most commented kernel space code :D
 }
@@ -112,7 +129,7 @@ static void irqmap_queue_add(int irq_ind)
     
     // we use the last_mmap_byte here
     
-    *mmap->ives->wp = irq_ind; //assign interrupt value/number :D :)
+    *mmap->wp = irq_ind; //assign interrupt value/number :D :)
 
     //other way
     //ives->wp == q+(4064-1)
@@ -120,31 +137,58 @@ static void irqmap_queue_add(int irq_ind)
     //
     // haha izgubih se :D <3
     //
-    // if(mmap->ives.wp == &mmap->queue+LAST_QUEUE_BYTE)
+    // if(mmap->.wp == &mmap->queue+LAST_QUEUE_BYTE)
     // |
-    if(mmap->ives->wp == mmap+LAST_MMAP_BYTE)
+    if(mmap->wp == mmap+LAST_MMAP_BYTE)
     {
         //
         //LAST_MMAP_BYTE here
         // reset wp to beggining of queue (addr)
-        mmap->ives->wp = mmap->events;
+        mmap->wp = mmap->events;
         //void * memset ( void * ptr, int value, size_t num );
         // i think its not needed but idk, suppose yes to not lose data :) #will_see_later_I_must_impl_wa_to_see_ram
         //ways :) <#
         //memory map :)
         //steve jobs is my acid friend :)
         //
-        printk(KERN_NOTICE "irqmap_ram: LAST_MMAP_BYTE@%p => %x", mmap->ives->wp, *mmap->ives->wp);
+        printk(KERN_NOTICE "irqmap_ram: LAST_MMAP_BYTE@%p => %x", mmap->wp, *mmap->wp);
         //
         //oyea
         //
     }
     else
-        mmap->ives->wp++; //starts with the first byte of the queue, goto next one :D :)
+        mmap->wp++; //starts with the first byte of the queue, goto next one :D :)
 
     // we ready, tell the userspace to read :D :)
     //
     irqmap_send_ready_event();
+}
+
+static unsigned int irqmap_poll(struct file *filp, struct poll_table_struct *wait)
+{
+  unsigned int mask = 0;
+  //__poll_t mask = 0;
+  
+poll_wait(filp, &irqmap_queue, wait);
+  pr_info("irqmap_poll:\n");
+  
+  if(mmap->ready)
+  {
+    mmap->ready=false;
+    mask |= (POLLIN | POLLRDNORM);
+  }
+
+//    *
+//    * The buffer is circular; it is considered full
+//    * if "wp" is right behind "rp". "left" is 0 if the
+//    * buffer is empty, and it is "1" if it is completely full.
+//    *
+
+//todo
+  //if(mmap->rp != mmap->wp)
+  //  mask |= POLLIN | POLLRDNORM; // readable
+
+  return mask;
 }
 
 /// @brief todo area
@@ -231,7 +275,7 @@ static int __init irqmap_probe(struct platform_device *pdev)
 	printk(KERN_NOTICE "irqmap: PAGE_SIZE is %u", PAGE_SIZE);
 	if (ret < 0) goto out;
 
-    major = register_chrdev(0, DEVICE_NAME, &fops);
+    major = register_chrdev(0, irqmap_NAME, &fops);
     if (major < 0) {
         pr_info("irqmap: fail to register major number! %d", major);
 		//printk(KERN_ALERT "irqmap: Registering char device failed with %d\n", major);
@@ -242,16 +286,16 @@ static int __init irqmap_probe(struct platform_device *pdev)
 
     class = class_create(THIS_MODULE, CLASS_NAME);
     if (IS_ERR(class)){ 
-        unregister_chrdev(major, DEVICE_NAME);
+        unregister_chrdev(major, irqmap_NAME);
         pr_info("irqmap: failed to register device class");
         ret = PTR_ERR(class);
         goto out;
     }
 
-    device = device_create(class, NULL, MKDEV(major, 0), NULL, DEVICE_NAME);
+    device = device_create(class, NULL, MKDEV(major, 0), NULL, irqmap_NAME);
     if (IS_ERR(device)) {
         class_destroy(class);
-        unregister_chrdev(major, DEVICE_NAME);
+        unregister_chrdev(major, irqmap_NAME);
         ret = PTR_ERR(device);
         goto out;
     }
@@ -259,7 +303,7 @@ static int __init irqmap_probe(struct platform_device *pdev)
 	/*
 	printk(KERN_INFO "irqmap: I was assigned major number %d. To talk to\n", major);
 	printk(KERN_INFO "irqmap: the driver, create a dev file with\n");
-	printk(KERN_INFO "irqmap: 'mknod /dev/%s c %d 0'.\n", DEVICE_NAME, major);
+	printk(KERN_INFO "irqmap: 'mknod /dev/%s c %d 0'.\n", irqmap_NAME, major);
 	printk(KERN_INFO "irqmap: Try various minor numbers. Try to cat and echo to\n");
 	printk(KERN_INFO "irqmap: the device file.\n");
 	printk(KERN_INFO "irqmap: Remove the device file and module when done.\n");
@@ -278,10 +322,10 @@ static int __init irqmap_probe(struct platform_device *pdev)
     //
     // todo see offsets
     //
-    mmap->ives = (struct irqmap_events *)mmap+8;
-    mmap->events = (int*)mmap+8+128;
-    mmap->ives->rp = mmap->events;
-    mmap->ives->wp = mmap->events;
+    mmap->ready=false;
+    mmap->events = (int*)mmap+2;
+    mmap->rp = mmap->events;
+    mmap->wp = mmap->events;
 
 	
 	// ives->irq1 |= 1 << 2;
@@ -293,16 +337,10 @@ static int __init irqmap_probe(struct platform_device *pdev)
 	// ives->irq4 |= 1 << 9;
 	// ives->irq4 |= 1 << 10;
 
-    //1sec spammer
-    qd = msecs_to_jiffies(1000);
-    //pr_info("mykmod loaded %u jiffies\n", (unsigned)onesec);
+    //Initialize wait queue
+    //init_waitqueue_head(&irqmap_queue);
 
-        if (!wq)
-                wq = create_singlethread_workqueue("irqmap_q");
-        if (wq)
-                queue_delayed_work(wq, &irqmap_work, qd);
-
-    mutex_init(&device_mutex);
+    mutex_init(&irqmap_mutex);
 out: 
     return ret;
 	
@@ -313,11 +351,11 @@ static int irqmap_remove(struct platform_device *pdev)
 {
 	int i=0;
 
-	mutex_destroy(&device_mutex); 
+	mutex_destroy(&irqmap_mutex); 
     device_destroy(class, MKDEV(major, 0));
 	class_unregister(class);
     class_destroy(class);
-	unregister_chrdev(major, DEVICE_NAME);
+	unregister_chrdev(major, irqmap_NAME);
 
 	for(i=0; i<MAX_IRQS; i++)
 	{
@@ -333,14 +371,13 @@ static int irqmap_remove(struct platform_device *pdev)
 }
 
 /*
- * Called when a process tries to open the device file, like
- * "cat /dev/irqmap"
- */
-static int device_open(struct inode *inode, struct file *filp)
+** This function will be called when we open the Device file
+*/
+static int irqmap_open(struct inode *inode, struct file *filp)
 {
 	int ret = 0;
 
-if(!mutex_trylock(&device_mutex)) {
+if(!mutex_trylock(&irqmap_mutex)) {
         pr_alert("irqmap: device busy!\n");
         ret = -EBUSY;
         goto out;
@@ -349,9 +386,9 @@ if(!mutex_trylock(&device_mutex)) {
 pr_info("irqmap: Device opened\n");
 
   //static int counter = 0;
-  //if(Device_Open)
+  //if(irqmap_Open)
   //  return -EBUSY;
-  //Device_Open++;
+  //irqmap_Open++;
   
   //see here later
   //sprintf(msg, "%p\n", ives);
@@ -363,13 +400,13 @@ out:
 }
 
 /*
- * Called when a process closes the device file.
- */
-static int device_release(struct inode *inode, struct file *filp)
+** This function will be called when we close the Device file
+*/
+static int irqmap_release(struct inode *inode, struct file *filp)
 {
-  //Device_Open--;
+  //irqmap_Open--;
 
-mutex_unlock(&device_mutex);
+mutex_unlock(&irqmap_mutex);
     pr_info("device: Device successfully closed\n");
   /*
    * Decrement the usage count, or else once you opened the file, you'll never
@@ -383,10 +420,9 @@ return 0;
 // dva returna xD
 
 /*
- * Called when a process, which already opened the dev file, attempts to read
- * from it.
- */
-static ssize_t device_read(struct file *filep, char *buffer, size_t len, loff_t *offset)
+** This function will be called when we read the Device file
+*/
+static ssize_t irqmap_read(struct file *filep, char *buffer, size_t len, loff_t *offset)
 {
     int ret;
     
@@ -407,7 +443,10 @@ out:
     return ret;
 }
 
-static ssize_t device_write(struct file *filep, const char *buffer, size_t len, loff_t *offset)
+/*
+** This function will be called when we write the Device file
+*/
+static ssize_t irqmap_write(struct file *filep, const char *buffer, size_t len, loff_t *offset)
 {
     int ret;
  
@@ -423,7 +462,7 @@ out:
     return ret;
 }
 
-static int device_mmap(struct file *filp, struct vm_area_struct *vma)
+static int irqmap_mmap(struct file *filp, struct vm_area_struct *vma)
 {
     int ret = 0;
     struct page *page = NULL;
@@ -442,12 +481,6 @@ static int device_mmap(struct file *filp, struct vm_area_struct *vma)
 
 out:
     return ret;
-}
-
-
-static void irqmap_timer(struct work_struct *w)
-{
-    pr_info("irqmap: work %u jiffies\n", (unsigned)qd);
 }
 
 #if defined(CONFIG_OF)

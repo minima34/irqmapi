@@ -22,9 +22,9 @@ static const struct modversion_info ____versions[]
 __used
 __attribute__((section("__versions"))) = {
 	{ 0xb622add4, __VMLINUX_SYMBOL_STR(module_layout) },
-	{ 0x6b06fdce, __VMLINUX_SYMBOL_STR(delayed_work_timer_fn) },
 	{ 0xf93fb492, __VMLINUX_SYMBOL_STR(platform_driver_unregister) },
 	{ 0xb3c7d0fb, __VMLINUX_SYMBOL_STR(__platform_driver_probe) },
+	{ 0x65345022, __VMLINUX_SYMBOL_STR(__wake_up) },
 	{ 0x37a0cba, __VMLINUX_SYMBOL_STR(kfree) },
 	{ 0xf20dabd8, __VMLINUX_SYMBOL_STR(free_irq) },
 	{ 0x1ea1e740, __VMLINUX_SYMBOL_STR(class_unregister) },
@@ -32,8 +32,6 @@ __attribute__((section("__versions"))) = {
 	{ 0xa3c6fa2, __VMLINUX_SYMBOL_STR(mutex_destroy) },
 	{ 0x72e45ac7, __VMLINUX_SYMBOL_STR(kmalloc_caches) },
 	{ 0x10a6bb3c, __VMLINUX_SYMBOL_STR(__mutex_init) },
-	{ 0x9d378f70, __VMLINUX_SYMBOL_STR(queue_delayed_work_on) },
-	{ 0x43a53735, __VMLINUX_SYMBOL_STR(__alloc_workqueue_key) },
 	{ 0xa202a8e5, __VMLINUX_SYMBOL_STR(kmalloc_order_trace) },
 	{ 0x71ff0ddf, __VMLINUX_SYMBOL_STR(class_destroy) },
 	{ 0x618014ef, __VMLINUX_SYMBOL_STR(device_create) },
@@ -65,4 +63,4 @@ __attribute__((section(".modinfo"))) =
 MODULE_ALIAS("of:N*T*Cirqmap");
 MODULE_ALIAS("of:N*T*CirqmapC*");
 
-MODULE_INFO(srcversion, "2E4D17C33F6DD16D4BD6CEA");
+MODULE_INFO(srcversion, "C10F88B979F5126D9B907D0");

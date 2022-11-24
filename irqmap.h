@@ -5,27 +5,30 @@
  * 
  */
 
-struct irqmap_events
-{
-    //wr ptr
-    int *wp;
-    //rd ptr
-    int *rp;
-    int i_ev;
-    
-    //
-    // no sleep, sleep kills + sleep healths
-    // day                     night
-    // obrushta se neshto prizmata s narastvaneto na umorata 
-    //
-};
+//
+// no sleep, sleep kills + sleep healths
+// day                     night
+// obrushta se neshto prizmata s narastvaneto na umorata 
+//
+
+//4 //void (*irqh)(int);
 
 struct irq_mmap
 {
-	int irqs;
-    //4 //void (*irqh)(int);
-    struct irqmap_events *ives;
-    //dedicated to my sis
+	int irqs;//4
+    int ready;//4
+    int *rp; //read ptr
+    int *wp; //write ptr
     int *events;
 };
 
+// struct irqmap_event
+// {
+//     int irq_ind;
+// };
+
+// struct irq_mmap
+// {
+//     struct irq_vals ivs;
+//     // struct irq_queue iqu;
+// };

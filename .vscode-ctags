@@ -1,0 +1,91 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+BUF_LEN	irqmap.c	61;"	d	file:
+CLASS_NAME	irqmap.c	21;"	d	file:
+DEVICE_FILENAME	irqmap_us.c	8;"	d	file:
+DEVICE_NAME	irqmap.c	20;"	d	file:
+IRQMMAP_PAGES	irqmap.c	22;"	d	file:
+IRQMMAP_SIZE	irqmap.c	23;"	d	file:
+LAST_MMAP_BYTE	irqmap.c	24;"	d	file:
+LAST_QUEUE_BYTE	irqmap.c	25;"	d	file:
+MAX_IRQS	irqmap.c	19;"	d	file:
+MMAP_BYTES	irqmap_us.c	11;"	d	file:
+PAGES	irqmap_us.c	9;"	d	file:
+PAGE_SIZE	irqmap_us.c	10;"	d	file:
+SUCCESS	irqmap.c	60;"	d	file:
+__this_module	irqmap.mod.c	/^__visible struct module __this_module$/;"	v	typeref:struct:module
+__used	irqmap.mod.c	/^__used$/;"	v	file:
+__used	irqmap.mod.c	/^__used$/;"	v	typeref:struct:____versions	file:
+a	h.c	/^int a=0;$/;"	v
+bit_test	irqmap_us.c	/^int bit_test(int bit, int byte)$/;"	f
+can_read	poll_driver.c	/^static bool can_read  = false;$/;"	v	file:
+can_write	poll_driver.c	/^static bool can_write = false;$/;"	v	file:
+class	irqmap.c	/^static struct class*  class;$/;"	v	typeref:struct:class	file:
+dev	poll_driver.c	/^dev_t dev = 0;$/;"	v
+dev_class	poll_driver.c	/^static struct class *dev_class;$/;"	v	typeref:struct:class	file:
+device	irqmap.c	/^static struct device*  device;$/;"	v	typeref:struct:device	file:
+device_mmap	irqmap.c	/^static int device_mmap(struct file *filp, struct vm_area_struct *vma)$/;"	f	file:
+device_open	irqmap.c	/^static int device_open(struct inode *inode, struct file *filp)$/;"	f	file:
+device_poll	irqmap.c	/^device_poll(struct file *filp, poll_table *wait)$/;"	f	file:
+device_read	irqmap.c	/^static ssize_t device_read(struct file *filep, char *buffer, size_t len, loff_t *offset)$/;"	f	file:
+device_release	irqmap.c	/^static int device_release(struct inode *inode, struct file *filp)$/;"	f	file:
+device_write	irqmap.c	/^static ssize_t device_write(struct file *filep, const char *buffer, size_t len, loff_t *offset)$/;"	f	file:
+etx_attr	poll_driver.c	/^struct kobj_attribute etx_attr = __ATTR(etx_value, 0660, sysfs_show, sysfs_store);$/;"	v	typeref:struct:kobj_attribute
+etx_cdev	poll_driver.c	/^static struct cdev etx_cdev;$/;"	v	typeref:struct:cdev	file:
+etx_driver_init	poll_driver.c	/^static int __init etx_driver_init(void)$/;"	f	file:
+etx_open	poll_driver.c	/^static int etx_open(struct inode *inode, struct file *file)$/;"	f	file:
+etx_poll	poll_driver.c	/^static unsigned int etx_poll(struct file *filp, struct poll_table_struct *wait)$/;"	f	file:
+etx_read	poll_driver.c	/^static ssize_t etx_read(struct file *filp, char __user *buf, size_t len, loff_t *off)$/;"	f	file:
+etx_release	poll_driver.c	/^static int etx_release(struct inode *inode, struct file *file)$/;"	f	file:
+etx_value	poll_driver.c	/^static char etx_value[20];$/;"	v	file:
+etx_write	poll_driver.c	/^static ssize_t etx_write(struct file *filp, const char __user *buf, size_t len, loff_t *off)$/;"	f	file:
+events	irqmap.h	/^    int *events;$/;"	m	struct:irq_mmap
+events	junk.c	/^    int events[1016];$/;"	m	struct:prot_queue	file:
+fops	irqmap.c	/^static const struct file_operations fops = {$/;"	v	typeref:struct:file_operations	file:
+fops	poll_driver.c	/^static struct file_operations fops =$/;"	v	typeref:struct:file_operations	file:
+i_ev	irqmap_us.c	/^    int i_ev;                  \/\/4 -> 32 hihihi govori_mi_finala$/;"	m	struct:irq_vals	file:
+int_get_array_index	irqmap.c	/^int int_get_array_index(int val, int *arr, u32 size)$/;"	f
+irq_dump	irqmap_us.c	/^void irq_dump()$/;"	f
+irq_handler	irqmap.c	/^static irqreturn_t irq_handler (int irq, void *dev_id)$/;"	f	file:
+irq_handler	irqmap_us.c	/^void irq_handler(int irq_ind)$/;"	f
+irq_mmap	irqmap.h	/^struct irq_mmap$/;"	s
+irq_strs	irqmap.c	/^static char *irq_strs[MAX_IRQS] = {0};$/;"	v	file:
+irq_vals	irqmap_us.c	/^struct irq_vals {$/;"	s	file:
+irqh	irqmap_us.c	/^    void (*irqh)(int);        \/\/8 suppose$/;"	m	struct:irq_vals	file:
+irqmap_driver	irqmap.c	/^static struct platform_driver irqmap_driver = {$/;"	v	typeref:struct:platform_driver	file:
+irqmap_dt_ids	irqmap.c	/^static const struct of_device_id irqmap_dt_ids[] = {$/;"	v	typeref:struct:of_device_id	file:
+irqmap_init_irqs	irqmap.c	/^static int irqmap_init_irqs(struct platform_device *pdev)$/;"	f	file:
+irqmap_probe	irqmap.c	/^static int __init irqmap_probe(struct platform_device *pdev)$/;"	f	file:
+irqmap_queue_add	irqmap.c	/^static void irqmap_queue_add(int irq_ind)$/;"	f	file:
+irqmap_remove	irqmap.c	/^static int irqmap_remove(struct platform_device *pdev)$/;"	f	file:
+irqmap_send_ready_event	irqmap.c	/^static void irqmap_send_ready_event(void)$/;"	f	file:
+irqmap_timer	irqmap.c	/^static void irqmap_timer(struct work_struct *w)$/;"	f	file:
+irqs	irqmap.c	/^int irqs[MAX_IRQS];$/;"	v
+irqs	irqmap.h	/^	int irqs;$/;"	m	struct:irq_mmap
+irqs	irqmap_us.c	/^	int irqs;                  \/\/4$/;"	m	struct:irq_vals	file:
+is	study_this.c	/^int is[8];$/;"	v
+ivs	irqmap_us.c	/^static struct irq_vals *ivs;$/;"	v	typeref:struct:irq_vals	file:
+kobj_ref	poll_driver.c	/^struct kobject *kobj_ref;$/;"	v	typeref:struct:kobject
+main	h.c	/^int main()$/;"	f
+main	irqmap_us.c	/^int main(void)  $/;"	f
+main	study_this.c	/^int main()$/;"	f
+major	irqmap.c	/^static int major;$/;"	v	file:
+mmap	irqmap.c	/^struct irq_mmap *mmap;$/;"	v	typeref:struct:irq_mmap
+msg	irqmap.c	/^static char msg[BUF_LEN];$/;"	v	file:
+msg_Ptr	irqmap.c	/^static char *msg_Ptr;$/;"	v	file:
+p	study_this.c	/^int *p = 0;$/;"	v
+prot_queue	junk.c	/^struct prot_queue$/;"	s	file:
+q	irqmap_us.c	/^    struct prot_queue *q;      \/\/4064$/;"	m	struct:irq_vals	typeref:struct:irq_vals::prot_queue	file:
+qd	irqmap.c	/^static unsigned long qd;$/;"	v	file:
+rp	irqmap.h	/^    int *rp; \/\/read ptr$/;"	m	struct:irq_mmap
+rp	irqmap_us.c	/^    void *rp;                  \/\/8 -> o yea 28 here$/;"	m	struct:irq_vals	file:
+sysfs_show	poll_driver.c	/^static ssize_t sysfs_show(struct kobject *kobj, $/;"	f	file:
+sysfs_store	poll_driver.c	/^static ssize_t sysfs_store(struct kobject *kobj, $/;"	f	file:
+wait_queue_etx_data	poll_driver.c	/^DECLARE_WAIT_QUEUE_HEAD(wait_queue_etx_data);$/;"	v
+wp	irqmap.h	/^    int *wp; \/\/write ptr$/;"	m	struct:irq_mmap
+wp	irqmap_us.c	/^    void *wp;                  \/\/8 -> 20$/;"	m	struct:irq_vals	file:
+wq	irqmap.c	/^static struct workqueue_struct *wq = 0;$/;"	v	typeref:struct:workqueue_struct	file:
